@@ -1,0 +1,146 @@
+---mod REGLAS is
+---    protecting TOKENS .
+---    rl [ejemplo] : < O : Process | 
+---        nodes: (task(Nid, St, Fid1, Fid2, T, Rcs, SE0, SE1), Nodes), --- Se queda fijo. Sirven de información (parametros de entrada)
+---        flows: (flow(Fid1, T1), flow(Fid2, T2), Flows), 
+---        tokens: (token(Fid1, 0), Tokens),  --- Si lo tenemos en una lista ordenada sabemos cual es el siguiente token que tenemos que usar 
+---        Atts > 
+---            => 
+---        if available(RIds, Rs) then
+---            < O : Process | 
+---            nodes: (task(Nid, St, Fid1, Fid2, T, Rcs, SE0, SE1), Nodes), --- Se queda fijo
+---            flows: (flow(Fid1, T1), flow(Fid2, T2), Flows), 
+---            tokens: (add(token, id("20"), T), Tokens),  --- Añadimos el nuevo token a la lista del token cuando se consume
+---            Atts > 
+---        else 
+---            --- buscamos la primera regla que cumpla las condiciones para activarse, y ponerlo en la cabeza
+---        fi .
+
+---regla de tick
+---crl [tick] :
+---{Conf, T}
+---=>
+---{ delta(Conf, T'), t+ T'}
+---if T' := mte(conf)
+---
+---la funcion delta reduce los temporizadores de todos los tokens. Al menos lo de arriba era hasta ahora. en la practica sería del tipo:
+---
+---crl < O : Process | gtime: T, tokens: TKS, Atts >
+---=>
+---< O : Process | gtime: T + T', tokens: delta(TKS, T'), Atts > . --- Delta reduce T'  a todos los tokens
+---if T' := mte(TKS) /\ T' 0 .
+---    
+---endm
+
+---fmod PROCESS is
+---    including CONFIGURATION .
+---    
+---
+---    < O : Process | 
+---    nodes: start(id("O1"), id("O2")),
+---           task(id("O3"), "Sign in", id("O2"), id("O4"), T, empty, empty, empty), --- (,,, tiempo de la tarea, conjunto de id de recursos necesarios para correr la tare o empty, conjunto de , conjunto de)
+---           merge(id("O5"), exclusive, (id("O4,"), id("O10")), id("O6")),
+---    flows: flow(id("O2"), 2), --- El 2 es el retraso del flujo
+---           flow(id("O4"), 3)
+---    tokens: 
+---    gTime: T,
+---    resources: (resource(id("car"), 5, 5))
+---
+---endfm
+load time
+
+mod PROCESS is
+    inc CONFIGURATION .
+    pr NAT .
+    pr TIME .
+    
+    sort Process .
+    subsort Process < Cid .
+    subsort Nat < Oid .
+    op nodes:_ : Set{Node} -> Attribute [gather (&)] .
+    op flows:_ : Set{Flow} -> Attribute [gather (&)] .
+    op tokens:_ : List{Token} -> Attribute [gather (&)] .
+    op gtime:_ : Time -> Attribute [gather (&)] .
+    op resources:_ : Set{Resource} -> Attribute [gather (&)] .
+    op events:_ : Set{Event} -> Attribute [gather (&)] .
+
+endm 
+
+fmod IDS is
+
+    pr STRING .
+    sort Id .
+    op id : String -> Id .
+
+endfm
+
+fmod RESOURCES is
+
+    pr IDS .
+    pr NAT .
+
+    sort Resource .
+    op resource : Id Nat Nat -> Resource [ctor] .
+
+endfm
+
+fmod GATEWAY is 
+
+    sort Gateway .
+    op exclusive : -> Gateway [ctor] .
+    op parallel : -> Gateway [ctor] .
+    op event-based : -> Gateway [ctor] .
+  
+endfm
+
+mod NODES is 
+    sort Node .
+    pr IDS .
+    pr GATEWAY .
+    pr TIME .
+    pr SET{Id} .
+
+    op start : Id Id -> Node [ctor] .
+    op end : Id Id -> Node [ctor] .
+    op task : Id String Id Id Time Set{Id} Set{Id} -> Node [ctor] .
+    op split : Id Gateway Id Set{Id} -> Node [ctor] .
+    op merge : Id Gateway Set{Id} Id -> Node [ctor] .
+
+endm
+
+fmod MESSAGES is
+
+    pr STRING .
+    sort Event .
+    
+    op msg : String -> Event [ctor] .
+
+endfm
+
+
+mod FLOWS is
+
+    pr IDS .
+    pr MESSAGES .
+    pr TIME .
+    
+    sort Flow .
+
+    op flow : Id Event Id -> Flow [ctor] .
+    op flow : Id Time -> Flow [ctor] .
+
+endm
+
+mod TOKENS is
+
+    pr IDS .
+    pr TIME .
+    sort Token . 
+
+    op token : Id Time -> Token [ctor] .
+
+endm
+
+view Id from TRIV to IDS is
+    sort Elt to Id .
+endv
