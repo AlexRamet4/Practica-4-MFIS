@@ -167,6 +167,8 @@ mod PROCESS is
     subsort Process < Cid .
     subsort Nat < Oid .
 
+    op Process : -> Process .
+
     op nodes:_ : Set{Node} -> Attribute [gather (&)] .
     op flows:_ : Set{Flow} -> Attribute [gather (&)] .
     op tokens:_ : List{Token} -> Attribute [gather (&)] .
@@ -177,9 +179,17 @@ mod PROCESS is
     vars T T' : Time .
     vars S S' : String .
     var LT : List{Token} .
-    var RS RS' : Set{Resource} .
-    var MES MES' MSS : Set{Event} .
+    vars RS RS' : Set{Id} . --- Set{Resource}
+    vars MES MES' MSS : Set{Id} . --- Set{Event}
     vars F F' : Flow .
+    var G : Gateway .
+    var FS : Set{Id} . --- Set{Flows}
+    vars id0 id1 id2 id3 id4 : Id .
+    var O : Oid .
+    var N : Nat .
+    var Atts : AttributeSet .
+    var NDS : Set{Node} .
+    var FWS : Set{Flow} .
     
     op addToken : Token List{Token} -> List{Token} .
 
@@ -192,19 +202,94 @@ mod PROCESS is
         append(token(id(S'), T'), addToken(token(id(S), T), LT)) 
         if T gt T' /\ S =/= S' .
 
-    op mte : List{Token} -> Token .
-    eq mte(LT) = head(LT) . --- eq mte(LT) = head(PonerPrimeroTareaNoBloqueante(LT)) .
+    op mte : List{Token} -> Time .
+    eq mte(token(id0, T) LT) = T . --- eq mte(LT) = head(PonerPrimeroTareaNoBloqueante(LT)) .
 
     op delta : List{Token} Time -> List{Token} .
     eq delta(nil, T) = nil .
     eq delta(token(id(S), T) LT, T') = append(token(id(S), T monus T'), delta(LT, T')) .
 
-    op bloqueante : Node Set{Recourse} Set{Event} -> Bool .
-    eq bloqueante(task(id(S), S', F, F', T, RS, MES, MSS), RS', MES') = (RS subset RS') /\ (MES subset MES') == false .
-    --- TODO: eq bloqueante(start)
-    --- TODO: eq bloqueante(end) 
-    --- TODO: eq bloqueante(merge)
-    --- TODO: eq bloqueante(split)
+    --- Nodo, ids de recursos e ids de eventos
+    op bloqueante : Node Set{Id} Set{Id} -> Bool .
+    eq bloqueante(task(id0, S, id1, id2, T, RS, MES, MSS), RS', MES') = (RS subset RS') and (MES subset MES') == false .
+    eq bloqueante(start(id0, id1), RS, MES) = false .
+    eq bloqueante(end(id0, id1), RS, MES) = false .
+    eq bloqueante(split(id0, G, id1, FS), RS, MES) = false .
+    eq bloqueante(merge(id0, G, FS, id1), RS, MES) = false .
 
 
+    rl [start]  :  < O : Process | 
+    nodes: (start(id0, id1), NDS),
+    flows: (flow(id1, T), FWS),
+    tokens: (token(id0, 0) LT), 
+    Atts > 
+    => 
+    < O : Process | 
+    nodes: (start(id0, id1), NDS),
+    flows: (flow(id1, T), FWS),
+    tokens: (token(id1, T) LT), 
+    Atts > .
+
+    rl [flow-node] : < O : Process |
+    nodes: (task(id0, S, id1, id2, T, RS, MES, MSS), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
+    flows: FWS,
+    tokens: (token(id1, 0) LT),
+    Atts > 
+    =>
+    < O : Process |
+    nodes: (task(id0, S, id1, id2, T, RS, MES, MSS), NDS),
+    flows: FWS,
+    tokens: (token(id0, T) LT),
+    Atts > .
+
+    rl [node-flow] : < O : Process |
+    nodes: (task(id0, S, id1, id2, T, RS, MES, MSS), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
+    flows: (flow(id2, T'), FWS),
+    tokens: (token(id0, 0) LT),
+    Atts > 
+    =>
+    < O : Process |
+    nodes: (task(id0, S, id1, id2, T, RS, MES, MSS), NDS),
+    flows: (flow(id2, T'), FWS),
+    tokens: (token(id2, T') LT),
+    Atts > .
+
+    rl [flow-end]  :  < O : Process | 
+    nodes: (end(id0, id1), NDS),
+    flows: (flow(id1, T), FWS),
+    tokens: (token(id1, 0) LT), 
+    Atts > 
+    => 
+    < O : Process | 
+    nodes: (end(id0, id1), NDS),
+    flows: (flow(id1, 0), FWS),
+    tokens: (token(id0, 0) LT), 
+    Atts > .
+
+
+    crl [tick] : < O : Process | gtime: T, tokens: LT, Atts >
+        => < O : Process | gtime: T + T', tokens: delta(LT, T'), Atts >  --- Delta reduce T'  a todos los tokens
+        if T' := mte(LT) /\ T' > 0 .
+
+    op prueba1 : Nat -> Object .
+    eq prueba1(N) = < N : Process | 
+    nodes: (start(id("N0"), id("F0")), 
+           end(id("N1"), id("F0"))),
+    flows: flow(id("F0"), 1),
+    tokens: token(id("N0"), 0),
+    gtime: 0,
+    resources: empty,
+    events: empty > .
+
+    op prueba2 : Nat -> Object .
+    eq prueba2(N) = < N : Process | 
+    nodes: (start(id("N0"), id("F0")), 
+           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty, empty, empty),
+           end(id("N1"), id("F1"))),
+    flows: (flow(id("F0"), 1), flow(id("F1"), 3)),
+    tokens: token(id("N0"), 0),
+    gtime: 0,
+    resources: empty,
+    events: empty > .
+    
 endm 
