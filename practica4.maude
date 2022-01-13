@@ -49,23 +49,6 @@
 ---endfm
 load time
 
-mod PROCESS is
-    inc CONFIGURATION .
-    pr NAT .
-    pr TIME .
-    
-    sort Process .
-    subsort Process < Cid .
-    subsort Nat < Oid .
-    op nodes:_ : Set{Node} -> Attribute [gather (&)] .
-    op flows:_ : Set{Flow} -> Attribute [gather (&)] .
-    op tokens:_ : List{Token} -> Attribute [gather (&)] .
-    op gtime:_ : Time -> Attribute [gather (&)] .
-    op resources:_ : Set{Resource} -> Attribute [gather (&)] .
-    op events:_ : Set{Event} -> Attribute [gather (&)] .
-
-endm 
-
 fmod IDS is
 
     pr STRING .
@@ -93,6 +76,10 @@ fmod GATEWAY is
   
 endfm
 
+view Id from TRIV to IDS is
+    sort Elt to Id .
+endv
+
 mod NODES is 
     sort Node .
     pr IDS .
@@ -102,7 +89,7 @@ mod NODES is
 
     op start : Id Id -> Node [ctor] .
     op end : Id Id -> Node [ctor] .
-    op task : Id String Id Id Time Set{Id} Set{Id} -> Node [ctor] .
+    op task : Id String Id Id Time Set{Id} Set{Id} Set{Id} -> Node [ctor] .
     op split : Id Gateway Id Set{Id} -> Node [ctor] .
     op merge : Id Gateway Set{Id} Id -> Node [ctor] .
 
@@ -112,8 +99,8 @@ fmod MESSAGES is
 
     pr STRING .
     sort Event .
-    
-    op msg : String -> Event [ctor] .
+    pr IDS .
+    op msg : Id -> Event [ctor] .
 
 endfm
 
@@ -141,6 +128,83 @@ mod TOKENS is
 
 endm
 
-view Id from TRIV to IDS is
-    sort Elt to Id .
+
+
+view Node from TRIV to NODES is
+    sort Elt to Node .
 endv
+
+view Flow from TRIV to FLOWS is
+    sort Elt to Flow .
+endv
+
+view Resource from TRIV to RESOURCES is
+    sort Elt to Resource .
+endv
+
+view Token from TRIV to TOKENS is
+    sort Elt to Token .
+endv
+
+view Event from TRIV to MESSAGES is
+    sort Elt to Event .
+endv
+
+
+mod PROCESS is
+
+    inc CONFIGURATION .
+    pr NAT .
+    pr NAT-TIME-DOMAIN .
+
+    pr SET{Node} .
+    pr SET{Flow} .
+    pr SET{Resource} .
+    pr SET{Event} .
+    pr LIST{Token} .
+    
+    sort Process .
+    subsort Process < Cid .
+    subsort Nat < Oid .
+
+    op nodes:_ : Set{Node} -> Attribute [gather (&)] .
+    op flows:_ : Set{Flow} -> Attribute [gather (&)] .
+    op tokens:_ : List{Token} -> Attribute [gather (&)] .
+    op gtime:_ : Time -> Attribute [gather (&)] .
+    op resources:_ : Set{Resource} -> Attribute [gather (&)] .
+    op events:_ : Set{Event} -> Attribute [gather (&)] .
+
+    vars T T' : Time .
+    vars S S' : String .
+    var LT : List{Token} .
+    var RS RS' : Set{Resource} .
+    var MES MES' MSS : Set{Event} .
+    vars F F' : Flow .
+    
+    op addToken : Token List{Token} -> List{Token} .
+
+    eq addToken(token(id(S), T), nil) = token(id(S), T) .
+    ceq addToken(token(id(S), T), token(id(S'), T') LT) = 
+        append(token(id(S), T), token(id(S'), T') LT) 
+        if T gt T' == false /\ S =/= S' .
+
+    ceq addToken(token(id(S), T), token(id(S'), T') LT) = 
+        append(token(id(S'), T'), addToken(token(id(S), T), LT)) 
+        if T gt T' /\ S =/= S' .
+
+    op mte : List{Token} -> Token .
+    eq mte(LT) = head(LT) . --- eq mte(LT) = head(PonerPrimeroTareaNoBloqueante(LT)) .
+
+    op delta : List{Token} Time -> List{Token} .
+    eq delta(nil, T) = nil .
+    eq delta(token(id(S), T) LT, T') = append(token(id(S), T monus T'), delta(LT, T')) .
+
+    op bloqueante : Node Set{Recourse} Set{Event} -> Bool .
+    eq bloqueante(task(id(S), S', F, F', T, RS, MES, MSS), RS', MES') = (RS subset RS') /\ (MES subset MES') == false .
+    --- TODO: eq bloqueante(start)
+    --- TODO: eq bloqueante(end) 
+    --- TODO: eq bloqueante(merge)
+    --- TODO: eq bloqueante(split)
+
+
+endm 
