@@ -166,10 +166,11 @@ mod PROCESS is
     var FS : Set{Id} . --- Set{Flows}
     vars id0 id1 id2 id3 id4 : Id .
     var O : Oid .
-    var N : Nat .
+    vars N N' : Nat .
     var Atts : AttributeSet .
     var NDS : Set{Node} .
     var FWS : Set{Flow} .
+    var RCS : Set{Resource} .
     
     op mte : Set{Token} -> Time .
     ceq mte((token(id0, T), ST)) = T if T =/= 0 .
@@ -208,6 +209,23 @@ mod PROCESS is
     ceq allZero((token(id0, T), ST)) = false if  T =/= 0 .
     ceq allZero((token(id0, T), ST)) = allZero(ST) if T == 0 .
 
+    op resourceCoinciden : Set{Resource} Set{Id} -> Bool .
+    eq resourceCoinciden(empty, RS) = true .
+    eq resourceCoinciden(RCS, empty) = false .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id1, RS)) = resourceCoinciden((resource(id0, N, N'), RCS), RS) if id0 =/= id1 .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id0, RS)) = resourceCoinciden(RCS, RS) if N' > 0 .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id0, RS)) = false if N' == 0 .
+
+    op aumResources : Set{Id} Set{Resource} -> Set{Resource} .
+    eq aumResources(empty, RCS) = RCS .
+    eq aumResources((id0, RS), (resource(id0, N, N'), RCS)) = aumResources(RS, (resource(id0, N, s(N')), RCS)) .
+    ceq aumResources((id0, RS), (resource(id1, N, N'), RCS)) = aumResources(RS, (resource(id0, N, N'), RCS)) if id1 =/= id0 .
+
+    op disResources : Set{Id} Set{Resource} -> Set{Resource} .
+    eq disResources(empty, RCS) = RCS .
+    eq disResources((id0, RS), (resource(id0, N, s(N')), RCS)) = disResources(RS, (resource(id0, N, N'), RCS)) .
+    ceq disResources((id0, RS), (resource(id1, N, N'), RCS)) = disResources(RS, (resource(id0, N, N'), RCS)) if id1 =/= id0 .
+
     rl [start]  :  < O : Process | 
     nodes: (start(id0, id1), NDS),
     flows: (flow(id1, T), FWS),
@@ -221,25 +239,25 @@ mod PROCESS is
     Atts > .
 
     rl [flow-node] : < O : Process |
-    nodes: (task(id0, S, id1, id2, T, RS), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
+    nodes: (task(id0, S, id1, id2, T, empty), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
     flows: FWS,
     tokens: (token(id1, 0), ST),
     Atts > 
     =>
     < O : Process |
-    nodes: (task(id0, S, id1, id2, T, RS), NDS),
+    nodes: (task(id0, S, id1, id2, T, empty), NDS),
     flows: FWS,
     tokens: (token(id0, T), ST),
-    Atts > .
+     Atts > .
 
     rl [node-flow] : < O : Process |
-    nodes: (task(id0, S, id1, id2, T, RS), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
+    nodes: (task(id0, S, id1, id2, T, empty), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
     flows: (flow(id2, T'), FWS),
     tokens: (token(id0, 0), ST),
     Atts > 
     =>
     < O : Process |
-    nodes: (task(id0, S, id1, id2, T, RS), NDS),
+    nodes: (task(id0, S, id1, id2, T, empty), NDS),
     flows: (flow(id2, T'), FWS),
     tokens: (token(id2, T'), ST),
     Atts > .
@@ -304,6 +322,33 @@ mod PROCESS is
     tokens: (token(id3, T), deleteTokens(FS, ST)), 
     Atts > .
 
+    crl [flow-node-resource] : < O : Process |
+    nodes: ((task(id0, S, id1, id2, T, RS), NDS)),
+    flows: FWS,
+    tokens: (token(id1, 0), ST),
+    resources: RCS,
+    Atts > 
+    =>
+    < O : Process |
+    nodes: ((task(id0, S, id1, id2, T, RS), NDS)),
+    flows: FWS,
+    tokens: (token(id0, T), ST),
+    resources: disResources(RS, RCS), --- restar a todos los recursos
+    Atts > if resourceCoinciden(RCS, RS) and RS =/= empty and RCS =/= empty .
+
+    crl [node-flow-resource] : < O : Process |
+    nodes: ((task(id0, S, id1, id2, T, RS), NDS)),
+    flows: (flow(id2, T'), FWS),
+    tokens: (token(id0, 0), ST),
+    resources: RCS,
+    Atts > 
+    =>
+    < O : Process |
+    nodes: ((task(id0, S, id1, id2, T, RS), NDS)),
+    flows: (flow(id2, T'), FWS),
+    tokens: (token(id2, T'), ST),
+    resources: aumResources(RS, RCS), --- aumentar a todos los recursos
+    Atts > if RS =/= empty and RCS =/= empty .
 
     crl [tick] : < O : Process | gtime: T, tokens: ST, Atts >
         => < O : Process | gtime: T + T', tokens: delta(ST, T'), Atts >  --- Delta reduce T'  a todos los tokens
@@ -376,5 +421,17 @@ mod PROCESS is
     gtime: 0,
     resources: empty > .
 
+    op prueba7 : -> Object .
+    eq prueba7 = < 0 : Process | 
+    nodes: (start(id("N0"), id("F0")), 
+           task(id("T1"), "Patata", id("F2"), id("F3"), 5, (id("R0"))),
+           task(id("T0"), "Ortu me cae mal", id("F1"), id("F4"), 2, (id("R0"))),
+           split(id("S0"), parallel, id("F0"), (id("F1"), id("F2"))),
+           end(id("N2"), id("F3")),
+           end(id("N3"), id("F4"))),
+    flows: (flow(id("F0"), 1), flow(id("F1"), 2), flow(id("F2"), 3), flow(id("F3"), 1), flow(id("F4"), 2)),
+    tokens: token(id("N0"), 0),
+    gtime: 0,
+    resources: resource(id("R0"), 1, 1) > .
 
 endm 
