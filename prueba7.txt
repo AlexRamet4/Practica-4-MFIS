@@ -1,0 +1,33 @@
+ crl [flow-node-resource] : < O : Process |
+    nodes: (task(id0, S, id1, id2, T, (id2, RS), NDS), --- Todo: es posible q haya q hacer una regla con recursos en empty y otra q si tenga cositas
+    flows: FWS,
+    tokens: (token(id1, 0), ST),
+    resources:(resource(id2, N, N'), RCS) ,
+    Atts > 
+    =>
+    < O : Process |
+    nodes: (task(id0, S, id1, id2, T, (id2, RS)), NDS),
+    flows: FWS,
+    tokens: (token(id0, T), ST),
+    resources: (resource(id2, N, (N' - 1)), RCS) ,
+    Atts > if resourceCoinciden((resource(id2, N, N'), RCS) ,(id2, RS)) .
+
+    op prueba7 : -> Object .
+    eq prueba7 = < 0 : Process | 
+    nodes: (start(id("N0"), id("F0")), 
+           task(id("T1"), "Patata", id("F2"), id("F3"), 5, (id("R0"))),
+           task(id("T0"), "Ortu me cae mal", id("F1"), id("F4"), 2, (id("R0"))),
+           split(id("S0"), parallel, id("F0"), (id("F1"), id("F2"))),
+           end(id("N2"), id("F3")),
+           end(id("N3"), id("F4"))),
+    flows: (flow(id("F0"), 1), flow(id("F1"), 2), flow(id("F2"), 3), flow(id("F3"), 1), flow(id("F4"), 2)),
+    tokens: token(id("N0"), 0),
+    gtime: 0,
+    resources: resource(id("R0"), 1, 1) > .
+
+    op resourceCoinciden : Set{Resource} Set{Id} -> Bool .
+    eq resourceCoinciden(empty, RS) = true .
+    eq resourceCoinciden(RCS, empty) = false .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id1, RS)) = resourceCoinciden((resource(id0, N, N'), RCS), RS) if id0 =/= id1 .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id0, RS)) = resourceCoinciden(RCS, RS) if N' > 0 .
+    ceq resourceCoinciden((resource(id0, N, N'), RCS), (id0, RS)) = false if N' == 0 .

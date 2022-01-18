@@ -172,8 +172,8 @@ mod PROCESS is
     var FWS : Set{Flow} .
     
     op mte : Set{Token} -> Time .
-    eq mte((token(id0, T), ST)) = T . --- eq mte,(ST) = head(PonerPrimeroTareaNoBloqueante(LT)) .
-    --- TO DO: poner mte -> si algo puede avanzar que avance
+    ceq mte((token(id0, T), ST)) = T if T =/= 0 .
+    ceq mte((token(id0, T), ST)) = mte(ST) if T == 0 .
 
     op delta : Set{Token} Time -> Set{Token} .
     eq delta(empty, T) = empty .
@@ -193,13 +193,20 @@ mod PROCESS is
 
     op deleteTokens : Set{Id} Set{Token} -> Set{Token} .
     eq deleteTokens(empty, ST) = ST .
+    eq deleteTokens(FS, empty) = empty .
     eq deleteTokens((id0, FS), (token(id0, T), ST)) = deleteTokens(FS, ST) .
-    
+    ceq deleteTokens((id0, FS), (token(id1, T), ST)) = deleteTokens(FS, (token(id1, T), ST)) if id1 =/= id0 .
+
+    op tokensCoincidenFlows : Set{Id} Set{Token} -> Set{Token} .
+    eq tokensCoincidenFlows(empty, ST) = empty .
+    eq tokensCoincidenFlows(FS, empty) = empty .
+    eq tokensCoincidenFlows((id0, FS), (token(id0, T), ST)) = (token(id0, T), tokensCoincidenFlows(FS, ST)) .
+    ceq tokensCoincidenFlows((id0, FS), (token(id1, T), ST)) = tokensCoincidenFlows(FS, ST) if id0 =/= id1 .
 
     op allZero : Set{Token} -> Bool .
     eq allZero(empty) = true .
     ceq allZero((token(id0, T), ST)) = false if  T =/= 0 .
-    eq allZero((token(id0, 0), ST)) = allZero(ST) .
+    ceq allZero((token(id0, T), ST)) = allZero(ST) if T == 0 .
 
     rl [start]  :  < O : Process | 
     nodes: (start(id0, id1), NDS),
@@ -245,7 +252,7 @@ mod PROCESS is
     => 
     < O : Process | 
     nodes: (end(id0, id1), NDS),
-    flows: (flow(id1, 0), FWS),
+    flows: (flow(id1, T), FWS),
     tokens: (token(id0, 0), ST), 
     Atts > .
 
@@ -274,16 +281,16 @@ mod PROCESS is
     Atts > .
 
     crl [flow-merge-and] : < O : Process |  
-    nodes: (merge(id0, parallel, FS, id3), NDS),
+    nodes: (merge(id0, parallel, (id1, FS), id3), NDS),
     flows: (flow(id3, T), FWS), 
-    tokens: ST, 
+    tokens: (token(id1, 0), ST), 
     Atts > 
     =>
     < O : Process | 
-    nodes: (merge(id0, parallel, FS, id3), NDS),
+    nodes: (merge(id0, parallel, (id1, FS), id3), NDS),
     flows: (flow(id3, T), FWS),
-    tokens: (token(id3, T), deleteTokens(FS, ST)), 
-    Atts > if allZero(flowToToken(FS, FWS)) . 
+    tokens: (token(id3, T), deleteTokens(FS, ST)),
+    Atts > if allZero(tokensCoincidenFlows(FS, ST)) .
 
     rl [flow-merge-or] : < O : Process | 
     nodes: (merge(id0, exclusive, (id1, FS), id3), NDS),
@@ -368,5 +375,6 @@ mod PROCESS is
     tokens: token(id("N0"), 0),
     gtime: 0,
     resources: empty > .
+
 
 endm 
