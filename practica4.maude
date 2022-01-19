@@ -1,52 +1,3 @@
----mod REGLAS is
----    protecting TOKENS .
----    rl [ejemplo] : < O : Process | 
----        nodes: (task(Nid, St, Fid1, Fid2, T, Rcs, SE0, SE1), Nodes), --- Se queda fijo. Sirven de información (parametros de entrada)
----        flows: (flow(Fid1, T1), flow(Fid2, T2), Flows), 
----        tokens: (token(Fid1, 0), Tokens),  --- Si lo tenemos en una lista ordenada sabemos cual es el siguiente token que tenemos que usar 
----        Atts > 
----            => 
----        if available(RIds, Rs) then
----            < O : Process | 
----            nodes: (task(Nid, St, Fid1, Fid2, T, Rcs, SE0, SE1), Nodes), --- Se queda fijo
----            flows: (flow(Fid1, T1), flow(Fid2, T2), Flows), 
----            tokens: (add(token, id("20"), T), Tokens),  --- Añadimos el nuevo token a la lista del token cuando se consume
----            Atts > 
----        else 
----            --- buscamos la primera regla que cumpla las condiciones para activarse, y ponerlo en la cabeza
----        fi .
-
----regla de tick
----crl [tick] :
----{Conf, T}
----=>
----{ delta(Conf, T'), t+ T'}
----if T' := mte(conf)
----
----la funcion delta reduce los temporizadores de todos los tokens. Al menos lo de arriba era hasta ahora. en la practica sería del tipo:
----
----crl < O : Process | gtime: T, tokens: TKS, Atts >
----=>
----< O : Process | gtime: T + T', tokens: delta(TKS, T'), Atts > . --- Delta reduce T'  a todos los tokens
----if T' := mte(TKS) /\ T' 0 .
----    
----endm
-
----fmod PROCESS is
----    including CONFIGURATION .
----    
----
----    < O : Process | 
----    nodes: start(id("O1"), id("O2")),
----           task(id("O3"), "Sign in", id("O2"), id("O4"), T, empty, empty, empty), --- (,,, tiempo de la tarea, conjunto de id de recursos necesarios para correr la tare o empty, conjunto de , conjunto de)
----           merge(id("O5"), exclusive, (id("O4,"), id("O10")), id("O6")),
----    flows: flow(id("O2"), 2), --- El 2 es el retraso del flujo
----           flow(id("O4"), 3)
----    tokens: 
----    gTime: T,
----    resources: (resource(id("car"), 5, 5))
----
----endfm
 load time
 
 fmod IDS is
@@ -138,7 +89,7 @@ mod PROCESS is
 
     inc CONFIGURATION .
     pr NAT .
-    pr NAT-TIME-DOMAIN .
+    pr NAT-TIME-DOMAIN-WITH-INF .
 
     pr SET{Node} .
     pr SET{Flow} .
@@ -172,9 +123,21 @@ mod PROCESS is
     var FWS : Set{Flow} .
     var RCS : Set{Resource} .
     
-    op mte : Set{Token} -> Time .
-    ceq mte((token(id0, T), ST)) = T if T =/= 0 .
-    ceq mte((token(id0, T), ST)) = mte(ST) if T == 0 .
+    op mte : Set{Token} Set{Node} Set{Flow} Set{Resource} -> Time .
+    eq mte(empty, NDS, FWS, RCS) = INF .
+
+    ceq mte((token(id0, T), ST), (merge(id1, parallel, (id0, FS), id2), NDS), (flow(id0, T'), FWS ), RCS) = 
+    mte(ST, (merge(id1, parallel, (id0, FS), id2), NDS), (flow(id0, T'), FWS ), RCS) 
+    if allZero(tokensCoincidenFlows(FS, (token(id0, T), ST)))  == false .
+
+    ceq mte((token(id0, 0), ST), (task(id1, S, id0, id2, T, RS), NDS), (flow(id0, T'), FWS), RCS) =
+    mte(ST, (task(id1, S, id0, id2, T, RS), NDS), (flow(id0, T'), FWS ), RCS) 
+    if resourceCoinciden(RCS, RS) == false .
+
+    eq mte((token(id0, 0), ST), (end(id0, id1) , NDS), FWS, RCS) = mte(ST, (end(id0, id1), NDS), FWS, RCS) .
+
+    eq mte((token(id0, T), ST), NDS, FWS, RCS) = min(T, mte(ST, NDS, FWS, RCS)) .
+
 
     op delta : Set{Token} Time -> Set{Token} .
     eq delta(empty, T) = empty .
@@ -350,9 +313,9 @@ mod PROCESS is
     resources: aumResources(RS, RCS), --- aumentar a todos los recursos
     Atts > if RS =/= empty and RCS =/= empty .
 
-    crl [tick] : < O : Process | gtime: T, tokens: ST, Atts >
-        => < O : Process | gtime: T + T', tokens: delta(ST, T'), Atts >  --- Delta reduce T'  a todos los tokens
-        if T' := mte(ST) /\ T' > 0 .
+    crl [tick] : < O : Process | nodes: NDS, flows: FWS, tokens: ST, gtime: T, resources: RCS, Atts >
+        => < O : Process | nodes: NDS, flows: FWS, tokens: delta(ST, T'), gtime: T + T', resources: RCS, Atts >  --- Delta reduce T'  a todos los tokens
+        if T' := mte(ST, NDS, FWS, RCS) /\ T' > 0 .
 
     op prueba1 : -> Object .
     eq prueba1 = < 0 : Process | 
