@@ -143,14 +143,6 @@ mod PROCESS is
     eq delta(empty, T) = empty .
     eq delta((token(id(S), T), ST), T') = union(token(id(S), T monus T'), delta(ST, T')) .
 
-    --- Nodo, ids de recursos e ids de eventos
-    op bloqueante : Node Set{Id} -> Bool .
-    eq bloqueante(task(id0, S, id1, id2, T, RS), RS') = (RS subset RS') == false .
-    eq bloqueante(start(id0, id1), RS) = false .
-    eq bloqueante(end(id0, id1), RS) = false .
-    eq bloqueante(split(id0, G, id1, FS), RS) = false .
-    eq bloqueante(merge(id0, G, FS, id1), RS) = false .
-
     op flowToToken :  Set{Id} Set{Flow} -> Set{Token} .
     eq flowToToken(empty, FWS) = empty .
     eq flowToToken((id0, FS), (flow(id0, T), FWS)) = union(token(id0,T), flowToToken(FS, FWS)) .
