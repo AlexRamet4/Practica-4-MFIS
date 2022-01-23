@@ -249,7 +249,7 @@ mod PROCESS is
     Atts > 
     =>
     < O : Process | 
-    nodes: (split(id0, exclusive, id1, FS), NDS),
+    nodes: (split(id0, exclusive, id1, (id2, FS)), NDS),
     flows: (flow(id1, T), FWS),
     tokens: (flowToToken(id2, (flow(id1, T), FWS)), ST), 
     Atts > .
@@ -309,97 +309,7 @@ mod PROCESS is
     crl [tick] : < O : Process | nodes: NDS, flows: FWS, tokens: ST, gtime: T, resources: RCS, Atts >
         => < O : Process | nodes: NDS, flows: FWS, tokens: delta(ST, T'), gtime: T + T', resources: RCS, Atts >  --- Delta reduce T'  a todos los tokens
         if T' := mte(ST, NDS, FWS, RCS) /\ T' > 0 .
-
-    op prueba1 : -> Object .
-    eq prueba1 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           end(id("N1"), id("F0"))),
-    flows: flow(id("F0"), 1),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-
-    op prueba2 : -> Object .
-    eq prueba2 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           end(id("N1"), id("F1"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-
-    op prueba3 : -> Object .
-    eq prueba3 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           split(id("S0"), parallel, id("F1"), (id("F2"), id("F3"))),
-           end(id("N1"), id("F2")),
-           end(id("N2"), id("F3"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3), flow(id("F2"), 1), flow(id("F3"), 2)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-
-    op prueba4 : -> Object .
-    eq prueba4 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           split(id("S0"), exclusive, id("F1"), (id("F2"), id("F3"))),
-           end(id("N1"), id("F2")),
-           end(id("N2"), id("F3"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3), flow(id("F2"), 1), flow(id("F3"), 2)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-    
-    op prueba5 : -> Object .
-    eq prueba5 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           split(id("S0"), parallel, id("F1"), (id("F2"), id("F3"))),
-           merge(id("S0"), exclusive, (id("F2"), id("F3")), id("F4")),
-           end(id("N1"), id("F4"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3), flow(id("F2"), 1), flow(id("F3"), 2), flow(id("F4"), 4)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-
-    op prueba6 : -> Object .
-    eq prueba6 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           split(id("S0"), parallel, id("F1"), (id("F2"), id("F3"))),
-           merge(id("S0"), parallel, (id("F2"), id("F3")), id("F4")),
-           end(id("N1"), id("F4"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3), flow(id("F2"), 1), flow(id("F3"), 2), flow(id("F4"), 4)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
-
-    op prueba7 : -> Object .
-    eq prueba7 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T1"), "Patata", id("F2"), id("F3"), 5, (id("R0"))),
-           task(id("T0"), "Ortu me cae mal", id("F1"), id("F4"), 2, (id("R0"))),
-           split(id("S0"), parallel, id("F0"), (id("F1"), id("F2"))),
-           end(id("N2"), id("F3")),
-           end(id("N3"), id("F4"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 2), flow(id("F2"), 3), flow(id("F3"), 1), flow(id("F4"), 2)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: resource(id("R0"), 1, 1) > .
-
-    op prueba8 : -> Object .
-    eq prueba8 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T1"), "Patata", id("F0"), id("F1"), 5, (id("R0"))),
-           end(id("N1"), id("F1"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 2) ),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: resource(id("R0"), 1, 1) > .
-
+        
     op PROCESS : -> Object .
     eq PROCESS 
     = < 0 : Process | 
