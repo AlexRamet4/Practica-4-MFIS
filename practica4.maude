@@ -134,7 +134,6 @@ mod PROCESS is
     mte(ST, (task(id1, S, id0, id2, T, RS), NDS), RCS) 
     if resourceCoinciden(RCS, RS) == false .
 
-
     op delta : Set{Token} Time -> Set{Token} .
     eq delta(empty, T) = empty .
     eq delta((token(id(S), T), ST), T') = union(token(id(S), T monus T'), delta(ST, T')) .
@@ -153,11 +152,6 @@ mod PROCESS is
     eq allZero(empty, ST) = true .
     ceq allZero((id0, FS), (token(id0, T), ST)) = allZero(FS, ST) if T = 0 .
     ceq allZero((id0, FS), ST) = false if token(id0, 0) in ST = false .
-
-    op comprobarTokensEntrada : Set{Id} Set{Token} -> Bool .
-    eq comprobarTokensEntrada(empty, ST) = true .
-    eq comprobarTokensEntrada((id0 , RS), (token(id0, 0), ST)) = comprobarTokensEntrada(RS, ST) .
-    ceq comprobarTokensEntrada((id0 , RS), ST) = false if token(id0, 0) in ST = false .
 
     op resourceCoinciden : Set{Resource} Set{Id} -> Bool .
     eq resourceCoinciden(empty, empty) = true .
@@ -304,7 +298,7 @@ mod PROCESS is
     crl [tick] : < O : Process | nodes: NDS, flows: FWS, tokens: ST, gtime: T, resources: RCS, Atts >
         => < O : Process | nodes: NDS, flows: FWS, tokens: delta(ST, T'), gtime: T + T', resources: RCS, Atts >  --- Delta reduce T'  a todos los tokens
         if T' := mte(ST, NDS, RCS) /\ T' > 0 .
-        
+
     op PROCESS : -> Object .
     eq PROCESS 
     = < 0 : Process | 
