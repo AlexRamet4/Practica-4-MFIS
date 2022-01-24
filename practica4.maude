@@ -303,7 +303,7 @@ mod PROCESS is
 
     crl [tick] : < O : Process | nodes: NDS, flows: FWS, tokens: ST, gtime: T, resources: RCS, Atts >
         => < O : Process | nodes: NDS, flows: FWS, tokens: delta(ST, T'), gtime: T + T', resources: RCS, Atts >  --- Delta reduce T'  a todos los tokens
-        if T' := mte(ST, NDS, RCS) /\ T' > 0 /\ T < 100 .
+        if T' := mte(ST, NDS, RCS) /\ T' > 0 .
         
     op PROCESS : -> Object .
     eq PROCESS 
