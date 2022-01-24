@@ -122,18 +122,6 @@ mod PROCESS is
     var NDS : Set{Node} .
     var FWS : Set{Flow} .
     var RCS : Set{Resource} .
-
-    ---op available : Set{Id} Set{Resource} -> Bool .
-    ---eq available(empty, RCS) = true .
-    ---eq available((id0 , RS), (resource(id0, N, 0) , RCS)) = false .
-    ---eq available((id0 , RS), (resource(id0, s N, s N') , RCS)) = available(RS, RCS) .
-    
-    ---op mte : Set{Token} Set{Node} Set{Resource} -> Time .
-    ---eq mte(empty, NDS, RCS) = INF .
-    ---eq mte((token(id0, s T) , ST), NDS, RCS) = minimum(s T, mte(ST, NDS, RCS)) .
-    ---eq mte((token(id0, 0), ST), (merge(id1, parallel, (id0 , RS), id3) , NDS), RCS) = mte(ST, NDS, RCS) .
-    ---ceq mte((token(id2, 0) , ST), (task(id0, S, id2, id3, T, RS) , NDS), RCS) = mte(ST, NDS, RCS) if not resourceCoinciden(RCS, RS) . --- una tarea con recursos y el token está en la entrada y con tiempo 0. Si no está disponible la tarea. Ignoro el tiempo del token y hago el mte del resto.
-    ---ceq mte((token(id2, 0) , ST), (task(id0, S, id2, id3, T, RS) , NDS), RCS) = 0 if resourceCoinciden(RCS, RS) . --- Si la tarea se puede hacer lo que devuelve el mte es 0, porque esa tarea se puede hacer y debería de ejecuatrse la regla correspondiente.
     
     op mte : Set{Token} Set{Node} Set{Resource} -> Time .
     eq mte(empty, NDS, RCS) = INF .
@@ -160,12 +148,6 @@ mod PROCESS is
     eq deleteTokens(FS, empty) = empty .
     eq deleteTokens((id0, FS), (token(id0, T), ST)) = deleteTokens(FS, ST) .
     ceq deleteTokens((id0, FS), (token(id1, T), ST)) = deleteTokens(FS, (token(id1, T), ST)) if id1 =/= id0 .
-
-    ---op tokensCoincidenFlows : Set{Id} Set{Token} -> Set{Token} .
-    ---eq tokensCoincidenFlows(empty, ST) = empty .
-    ---eq tokensCoincidenFlows(FS, empty) = empty .
-    ---eq tokensCoincidenFlows((id0, FS), (token(id0, T), ST)) = (token(id0, T), tokensCoincidenFlows(FS, ST)) .
-    ---ceq tokensCoincidenFlows((id0, FS), (token(id1, T), ST)) = tokensCoincidenFlows(FS, ST) if id0 =/= id1 .
 
     op allZero : Set{Id} Set{Token} -> Bool .
     eq allZero(empty, ST) = true .
@@ -277,7 +259,6 @@ mod PROCESS is
     nodes: (merge(id0, parallel, (id1, FS), id3), NDS),
     flows: (flow(id3, T), FWS),
     tokens: (token(id3, T), deleteTokens(FS, ST)),
-    ---Atts > if comprobarTokensEntrada((id1, FS), (token(id1, 0), ST)) .
     Atts > if allZero(FS, ST) .
 
     rl [flow-merge-or] : < O : Process | 
@@ -322,7 +303,6 @@ mod PROCESS is
 
     crl [tick] : < O : Process | nodes: NDS, flows: FWS, tokens: ST, gtime: T, resources: RCS, Atts >
         => < O : Process | nodes: NDS, flows: FWS, tokens: delta(ST, T'), gtime: T + T', resources: RCS, Atts >  --- Delta reduce T'  a todos los tokens
-        ---if T' := mte(ST, NDS, FWS, RCS) /\ T' > 0 /\ T < 100 .
         if T' := mte(ST, NDS, RCS) /\ T' > 0 /\ T < 100 .
         
     op PROCESS : -> Object .
@@ -391,17 +371,5 @@ mod PROCESS is
                     resource(id("delivery man"), 1, 1), 
                     resource(id("car"), 1, 1), 
                     resource(id("drone"), 1, 1)) > .
-
-    op prueba6 : -> Object .
-    eq prueba6 = < 0 : Process | 
-    nodes: (start(id("N0"), id("F0")), 
-           task(id("T0"), "Patata", id("F0"), id("F1"), 2, empty),
-           split(id("S0"), parallel, id("F1"), (id("F2"), id("F3"))),
-           merge(id("S0"), parallel, (id("F2"), id("F3")), id("F4")),
-           end(id("N1"), id("F4"))),
-    flows: (flow(id("F0"), 1), flow(id("F1"), 3), flow(id("F2"), 1), flow(id("F3"), 2), flow(id("F4"), 4)),
-    tokens: token(id("N0"), 0),
-    gtime: 0,
-    resources: empty > .
 
 endm 
